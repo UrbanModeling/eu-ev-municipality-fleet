@@ -12,11 +12,17 @@ import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
-# External raw inputs — adjust these paths to match your local machine
-NIGHTLIGHT_DIR    = Path(r"F:\硕士\数据\交通碳排放\NTT_2026")
-ROADS_GPKG        = Path(r"F:\硕士\数据\碳排放大模型\OSM\eu14.geojson")
-ROAD_DIR          = Path(r"E:\Data\Project_A\Data\eu14_lau\road")
-CITY_BOUNDARY_SHP = Path(r"E:\Data\Project_A\Data\lau\LAU_14_Countries.gpkg")
+# ── USER CONFIGURATION ────────────────────────────────────────────────────
+# Set these paths to the locations of your downloaded external datasets.
+# See README for data sources.
+NIGHTLIGHT_DIR    = Path("path/to/nighttime_light")       # NPP-VIIRS-like annual .tif files
+ROADS_GPKG        = Path("path/to/osm_roads_eu14.geojson") # OSM road network (EU14)
+CITY_BOUNDARY_SHP = Path("path/to/gadm_eu14.gpkg")        # GADM municipality boundaries
+
+# Output directory for road-masked NTL statistics (one CSV per year).
+# 02_build_features.py reads from this same directory.
+NTL_OUT_DIR = Path(__file__).parent.parent / "data" / "ntl_road_stats"
+# ──────────────────────────────────────────────────────────────────────────
 
 # Spatial extent (lon/lat bounding box for EU14 region)
 # Excludes Greece and Poland vs. the previous EU16 scope
@@ -28,7 +34,7 @@ YEAR_START = 2011
 YEAR_END   = 2023
 
 
-ROAD_DIR.mkdir(parents=True, exist_ok=True)
+NTL_OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 min_lon, min_lat, max_lon, max_lat = BBOX
 
@@ -52,8 +58,8 @@ for year in range(YEAR_START, YEAR_END + 1):
     print(f"===== Processing {year} =====", flush=True)
 
     nightlight_path = Path(NIGHTLIGHT_DIR) / f"nppviirs_like_V2_{year}.tif"
-    output_tiff = ROAD_DIR / f"road_light_{year}.tif"
-    output_csv  = ROAD_DIR / f"road_light_{year}_stats.csv"
+    output_tiff = NTL_OUT_DIR / f"road_light_{year}.tif"
+    output_csv  = NTL_OUT_DIR / f"road_light_{year}_stats.csv"
 
     # Step 1 – windowed read: only load EU14 bbox, no full-raster load
     with rasterio.open(nightlight_path) as src:

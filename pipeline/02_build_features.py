@@ -21,10 +21,10 @@ Output 2: dataset_train.csv
 
 Inputs
 ------
-E:/Data/Project_A/Data/eu14/road_mean/road_light_{year}_stats.csv  (annual, w/ mean)
-E:/Data/Project_A/Data/eu14/gdp/city_gdp_{year}.csv                (5-yr)
-E:/Data/Project_A/Data/eu14/pop/eu14_population_.csv               (5-yr)
-E:/Data/Project_A/Data/eu14/vehicle/ev_eu14_with_icev_pt.csv       (national)
+data/ntl_road_stats/road_light_{year}_stats.csv  (output of 01_process_ntl.py)
+{GDP_DIR}/city_gdp_{year}.csv                    (5-yr gridded GDP, user-configured)
+{POP_CSV}                                        (5-yr gridded population, user-configured)
+{VEH_CSV}                                        (IEA national vehicle stocks, user-configured)
 """
 
 import numpy as np
@@ -32,12 +32,16 @@ import pandas as pd
 from pathlib import Path
 from scipy.interpolate import interp1d
 
-# ── Paths ──────────────────────────────────────────────────────────────────
-DATA_DIR  = Path(r"E:\Data\Project_A\Data\eu14")
-ROAD_DIR  = DATA_DIR / "road_mean"   # contains light_sum + light_mean
-GDP_DIR   = DATA_DIR / "gdp"
-POP_CSV   = DATA_DIR / "pop"  / "eu14_population_.csv"
-VEH_CSV   = DATA_DIR / "vehicle" / "ev_eu14_with_icev_pt.csv"
+# ── USER CONFIGURATION ────────────────────────────────────────────────────
+# Set these paths to the locations of your downloaded external datasets.
+# See README for data sources.
+GDP_DIR = Path("path/to/gdp")                       # gridded GDP CSVs (city_gdp_{year}.csv)
+POP_CSV = Path("path/to/eu14_population_.csv")      # gridded population CSV
+VEH_CSV = Path("path/to/ev_eu14_with_icev_pt.csv")  # IEA national vehicle stocks
+# ──────────────────────────────────────────────────────────────────────────
+
+# NTL statistics are read from the output directory of 01_process_ntl.py.
+ROAD_DIR = Path(__file__).parent.parent / "data" / "ntl_road_stats"
 
 OUT_DIR   = Path(__file__).parent.parent / "data"
 OUT_DIR.mkdir(exist_ok=True)

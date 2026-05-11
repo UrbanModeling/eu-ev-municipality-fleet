@@ -33,7 +33,6 @@ from pathlib import Path
 from xgboost import XGBRegressor
 
 # ── Paths ──────────────────────────────────────────────────────────────────
-DATA_DIR   = Path(r"E:\Data\Project_A\Data\eu14")
 PROJ_DIR   = Path(__file__).parent.parent
 PROJ_DIR.joinpath("output").mkdir(exist_ok=True)
 OUTPUT_CSV = PROJ_DIR / "output" / "eu14_city_vehicles_xgb_2011_2023.csv"

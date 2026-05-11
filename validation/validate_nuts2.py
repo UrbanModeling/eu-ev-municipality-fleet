@@ -18,14 +18,18 @@ from pathlib import Path
 import warnings
 warnings.filterwarnings("ignore")
 
-PROJ  = Path(__file__).parent.parent
-DATA  = Path(r'E:\Data\Project_A\Data\eu14')
+PROJ = Path(__file__).parent.parent
 
-VEH_CSV  = PROJ / 'output' / 'eu14_city_vehicles_xgb_2011_2023.csv'
-BND_CSV  = PROJ / 'data' / 'boundary' / 'eu14_city.csv'
-ESTAT_TSV = DATA / 'eurostat_nuts3_vehicles.tsv'
-LABELS_TSV = DATA / 'eurostat_nuts_labels.tsv'
-OUT_DIR  = PROJ / 'output' / 'validation_nuts2'
+# ── USER CONFIGURATION ────────────────────────────────────────────────────
+# Set these paths to the locations of your downloaded Eurostat validation data.
+# See README for data sources.
+ESTAT_TSV  = Path("path/to/eurostat_nuts3_vehicles.tsv")
+LABELS_TSV = Path("path/to/eurostat_nuts_labels.tsv")
+# ──────────────────────────────────────────────────────────────────────────
+
+VEH_CSV = PROJ / 'output' / 'eu14_city_vehicles_xgb_2011_2023.csv'
+BND_CSV = PROJ / 'data' / 'boundary' / 'eu14_city.csv'
+OUT_DIR = PROJ / 'output' / 'validation_nuts2'
 OUT_DIR.mkdir(exist_ok=True)
 
 # ── NUTS-2 mapping tables ──────────────────────────────────────────────────

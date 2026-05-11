@@ -2,7 +2,7 @@
 
 Code repository for the paper:
 
-> **A municipality-level dataset of electric vehicle fleet composition across 14 European countries, 2011–2023**
+> **A municipality-level dataset of electric vehicle fleet composition across 65,300 European cities, 2011–2023**
 
 This repository contains all code used to generate, validate, and visualise the dataset. The dataset itself is published separately (see *Data Availability* below).
 
@@ -52,6 +52,7 @@ The pipeline requires the following external datasets, which must be downloaded 
 | Gridded GDP per capita PPP (1990–2022) | Kummu et al. (2025), *Scientific Data* | `02_build_features.py` |
 | Gridded population (NASA GPW v4) | CIESIN / NASA SEDAC | `02_build_features.py` |
 | IEA Global EV Outlook — national EV stocks and shares | [iea.org](https://www.iea.org/data-and-statistics/data-product/global-ev-outlook) | `02_build_features.py` |
+| Eurostat regional passenger car stock (road_eqs_carage) | [ec.europa.eu/eurostat](https://ec.europa.eu/eurostat) | `validate_nuts2.py` |
 
 Update the path constants at the top of each script to point to your local copies of these files.
 
