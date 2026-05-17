@@ -80,26 +80,6 @@ To reproduce the paper figures run the scripts in `visualization/` after step 04
 | File | Dimensions | Description |
 |---|---|---|
 | `eu_ev_municipality_fleet_2011_2023.csv` | 848,900 rows × 14 columns | Municipality × year panel for 65,300 cities across 14 countries |
-| `eu_ev_national_fleet_2011_2023.csv` | 182 rows × 10 columns | Country × year panel (14 countries × 13 years) — national control totals |
-
-**Columns (municipality file)**
-
-| Column | Description |
-|---|---|
-| `uid` | GADM municipality identifier |
-| `city_name` | Municipality name |
-| `gid_0` | ISO 3166-1 alpha-3 country code |
-| `region` | Country name |
-| `year` | Year (2011–2023) |
-| `BEV` | Battery electric vehicle stock |
-| `PHEV` | Plug-in hybrid electric vehicle stock |
-| `FCEV` | Fuel-cell electric vehicle stock |
-| `other_veh` | All other passenger vehicles (internal combustion engine and non-electrified) |
-| `pop` | Municipality population |
-| `gdp` | Municipality GDP (PPP) |
-| `light_sum` | Road-masked nighttime light sum (proxy for economic activity scale) |
-| `light_mean` | Road-masked nighttime light mean (proxy for development density) |
-| `ev_share` | EV fleet share (BEV + PHEV + FCEV as fraction of total fleet) |
 
 Spatial boundaries can be joined using the `uid` column with GADM municipality polygons.
 
