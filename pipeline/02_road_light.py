@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 PROJ_DIR = Path(__file__).parent.parent
 BOUNDARY_GPKG = PROJ_DIR / "data" / "boundary" / "eu14_city.gpkg"
 NIGHTLIGHT_DIR = Path("path/to/nighttime_light")  # NPP-VIIRS-like annual .tif files, see README
-ROADS_PATH = Path(r"")   # OSM highway roads for the 14 study countries (gpkg/pbf) - TBD
+ROADS_PATH = Path("path/to/osm_road")   # OSM highway roads
 
 OUT_DIR = PROJ_DIR / "data" / "road"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
