@@ -12,32 +12,32 @@ This repository contains all code used to generate, validate, and visualise the 
 
 ```
 ├── pipeline/
-│   ├── 00_build_lau_boundary.py
-│   ├── 00b_build_lau_nuts2.py
-│   ├── 00c_exclude_overseas.py
-│   ├── 01_build_pop_gdp.py
-│   ├── 02_road_light.py
-│   ├── 03_build_dataset.py
-│   ├── 04_xgb_downscale.py
-│   ├── 04_xgb_downscale_nolight.py
-│   └── 05_build_results.py
+│   ├── 00_build_lau_boundary.py      # municipality boundary
+│   ├── 00b_build_lau_nuts2.py        # map to NUTS-2/NUTS-3
+│   ├── 00c_exclude_overseas.py       # drop French overseas depts
+│   ├── 01_build_pop_gdp.py           # population + GDP stats
+│   ├── 02_road_light.py              # nighttime-light stats
+│   ├── 03_build_dataset.py           # build training/feature panels
+│   ├── 04_xgb_downscale.py           # train model, predict city stocks
+│   ├── 04_xgb_downscale_nolight.py   # ablation: no nightlight
+│   └── 05_build_results.py          # assemble final result CSV
 ├── validation/
-│   ├── validate_nuts2.py
-│   ├── validate_nuts2_nolight.py
-│   ├── validate_norway.py
-│   └── validate_sweden.py
+│   ├── validate_nuts2.py             # NUTS-2 vs Eurostat
+│   ├── validate_nuts2_nolight.py     # NUTS-2, ablation model
+│   ├── validate_norway.py            # municipality vs SSB
+│   └── validate_sweden.py            # municipality vs Trafikanalys/SCB
 ├── analysis/
-│   ├── compute_rebalance_factor.py
-│   └── shap_analysis.py
+│   ├── compute_rebalance_factor.py   # rebalancing factor by country
+│   └── shap_analysis.py              # SHAP feature attribution
 └── visualization/
-    ├── fig2_trends.py
-    ├── fig3_geodist.py
-    ├── fig4_nuts2_validation.py
-    ├── fig5_validation.py
-    ├── figS1_r2_distribution.py
-    ├── figS2_combined.py
-    ├── figS3_rebalancing_factor.py
-    └── figS4_sweden_timeseries_examples.py
+    ├── fig2_trends.py                     # Fig. 2
+    ├── fig3_geodist.py                    # Fig. 3
+    ├── fig4_nuts2_validation.py           # Fig. 4
+    ├── fig5_validation.py                 # Fig. 5
+    ├── figS1_r2_distribution.py           # Supp. Fig. S1
+    ├── figS2_combined.py                  # Supp. Fig. S2
+    ├── figS3_rebalancing_factor.py        # Supp. Fig. S3
+    └── figS4_sweden_timeseries_examples.py # Supp. Fig. S4
 ```
 
 ---
