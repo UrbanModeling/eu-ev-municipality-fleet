@@ -1,26 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Step 03 (v5) – XGBoost downscale: predict city-level vehicle stocks
-using nighttime lights, GDP, and population as features.
+Step 04 - Train pooled XGBoost models (one per vehicle type), augmented
+with Germany Kreis-level KBA data, then predict and rescale city-level
+vehicle stocks.
 
-Strategy
---------
-Training:  read dataset_train.csv (national features + vehicle counts),
-           fit one XGBoost per vehicle type.
-Inference: read dataset_city_features.csv (city features), apply models
-           → city-level vehicle stock predictions.
-           Negative predictions are clipped to zero.
-
-Run 01_build_datasets.py first to generate the two input datasets.
-
-Inputs  (from data/ subfolder)
-------
-data/dataset_train.csv         national panel, features + targets
-data/dataset_city_features.csv city × year panel, features only
-
-Output
-------
-E:/Data/Project_A/Data/eu14/road/eu14_city_vehicles_xgb_2011_2023.csv
+Output: output/eu14_city_vehicles_xgb_2011_2024.csv
     Columns: region, city (UID), year, parameter, value
 """
 
@@ -32,15 +16,15 @@ import pandas as pd
 from pathlib import Path
 from xgboost import XGBRegressor
 
-# ── Paths ──────────────────────────────────────────────────────────────────
 PROJ_DIR   = Path(__file__).parent.parent
 PROJ_DIR.joinpath("output").mkdir(exist_ok=True)
-OUTPUT_CSV = PROJ_DIR / "output" / "eu14_city_vehicles_xgb_2011_2023.csv"
+OUTPUT_CSV = PROJ_DIR / "output" / "eu14_city_vehicles_xgb_2011_2024.csv"
 TRAIN_CSV  = PROJ_DIR / "data" / "dataset_train.csv"
 CITY_CSV   = PROJ_DIR / "data" / "dataset_city_features.csv"
+BND_CSV    = PROJ_DIR / "data" / "boundary" / "eu14_city.csv"
+KBA_CSV    = PROJ_DIR / "data" / "validation" / "deu_FZ Pkw mit Elektroantrieb Zulassungsbezirk_2102999911177145523.csv"
 
-FEATURES_PC   = ["gdp_per_cap", "light_per_cap", "light_mean_per_cap", "year"]
-FEATURES_CITY = ["gdp_per_cap", "light_per_cap", "light_mean_per_cap", "year"]
+FEATURES = ["gdp_per_cap", "light_per_cap", "light_mean_per_cap", "year"]
 
 XGB_PARAMS = dict(
     n_estimators=1000,
@@ -65,21 +49,73 @@ city_feat  = pd.read_csv(CITY_CSV)
 print(f"  Training set : {train_full.shape}")
 print(f"  City features: {city_feat.shape}")
 
-train_full = train_full.dropna(subset=FEATURES_PC + ["value_per_cap"])
-
-PARAMS = sorted(train_full["parameter_pt"].unique())
-print(f"  Vehicle types to model: {PARAMS}")
-print(f"  Training samples (per type): {len(train_full) // len(PARAMS)}")
+train_full = train_full.dropna(subset=FEATURES + ["value_per_cap"])
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 2. Train one XGBoost model per vehicle type  (target: vehicles per capita)
+# 2. Build Germany Kreis-level (NUTS3) augmentation rows from KBA 2023.10
 # ══════════════════════════════════════════════════════════════════════════════
-print("\nTraining XGBoost models (per-capita) ...")
+print("\nBuilding Germany NUTS3 (Kreis) augmentation rows from KBA 2023.10 ...")
+bnd = pd.read_csv(BND_CSV, low_memory=False, usecols=["UID", "GID_0", "CC_2"], dtype={"CC_2": str})
+bnd_de = bnd[bnd["GID_0"] == "DEU"].copy()
+# CC_2 is "DE" + 5-digit Kreisschluessel; strip the prefix and re-zero-pad.
+bnd_de["CC_2"] = bnd_de["CC_2"].str.replace("DE", "", regex=False).str.zfill(5)
+
+feat_de_2023 = city_feat[(city_feat["region"] == "Germany") & (city_feat["year"] == 2023)].copy()
+feat_de_2023 = feat_de_2023.merge(bnd_de, on="UID", how="left")
+feat_de_2023["light_mean_x_pop"] = feat_de_2023["light_mean"] * feat_de_2023["pop"]
+
+kreis = (
+    feat_de_2023.groupby("CC_2")
+    .agg(pop=("pop", "sum"), gdp=("gdp", "sum"), light_sum=("light_sum", "sum"),
+         light_mean_x_pop=("light_mean_x_pop", "sum"))
+    .reset_index()
+)
+kreis["gdp_per_cap"] = np.where(kreis["pop"] > 0, kreis["gdp"] / kreis["pop"], 0.0)
+kreis["light_per_cap"] = np.where(kreis["pop"] > 0, kreis["light_sum"] / kreis["pop"], 0.0)
+kreis["light_mean_per_cap"] = np.where(
+    kreis["pop"] > 0, (kreis["light_mean_x_pop"] / kreis["pop"]) / kreis["pop"], 0.0
+)
+kreis["year"] = 2023
+print(f"  Kreise with features: {len(kreis)}")
+
+kba = pd.read_csv(KBA_CSV, encoding="utf-8-sig")
+kba_23 = kba[kba["Berichtszeitpunkt"] == 2023.10].copy()
+schluessel_col = [c for c in kba_23.columns if "Schl" in c][0]
+kba_23["CC_2"] = kba_23[schluessel_col].astype(str).str.zfill(5)
+kba_23["BEV_actual"]  = kba_23["Pkw Insgesamt"] * kba_23["Pkw BEV Anteil"] / 100
+kba_23["PHEV_actual"] = kba_23["Pkw Insgesamt"] * kba_23["Pkw Plug In Hybrid Anteil"] / 100
+kba_23["ICEV_actual"] = kba_23["Pkw Insgesamt"] - kba_23["BEV_actual"] - kba_23["PHEV_actual"]
+
+kreis = kreis.merge(kba_23[["CC_2", "BEV_actual", "PHEV_actual", "ICEV_actual"]], on="CC_2", how="inner")
+print(f"  Kreise matched to KBA: {len(kreis)}")
+
+aug_rows = []
+for param, col in [("EV stock_BEV", "BEV_actual"), ("EV stock_PHEV", "PHEV_actual"), ("EV stock_ICEV", "ICEV_actual")]:
+    df = kreis[["gdp_per_cap", "light_per_cap", "light_mean_per_cap", "year", "pop", col]].copy()
+    df["value_per_cap"] = np.where(df["pop"] > 0, df[col] / df["pop"], 0.0)
+    df["region"] = "Germany"
+    df["parameter_pt"] = param
+    aug_rows.append(df[["region", "parameter_pt", "year"] + FEATURES[:3] + ["value_per_cap"]])
+
+aug_df = pd.concat(aug_rows, ignore_index=True)
+print(f"  Augmentation rows added: {len(aug_df)}  (across BEV/PHEV/ICEV; FCEV uses national panel only)")
+
+train_aug = pd.concat([train_full, aug_df], ignore_index=True)
+
+PARAMS = sorted(train_aug["parameter_pt"].unique())
+print(f"\n  Vehicle types to model: {PARAMS}")
+print(f"  Total training rows (national panel + DE Kreis augmentation): {len(train_aug)}  (was {len(train_full)})")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 3. Train one pooled XGBoost model per vehicle type  (target: vehicles per capita)
+# ══════════════════════════════════════════════════════════════════════════════
+print("\nTraining XGBoost models (pooled, per-capita, +DE NUTS3 augmentation) ...")
 models = {}
 for param in PARAMS:
-    sub = train_full[train_full["parameter_pt"] == param]
-    X = sub[FEATURES_PC].values
+    sub = train_aug[train_aug["parameter_pt"] == param]
+    X = sub[FEATURES].values
     y = sub["value_per_cap"].values
 
     model = XGBRegressor(**XGB_PARAMS)
@@ -90,19 +126,18 @@ for param in PARAMS:
     ss_res = np.sum((y - y_pred) ** 2)
     ss_tot = np.sum((y - y.mean()) ** 2)
     r2 = 1 - ss_res / ss_tot if ss_tot > 0 else float("nan")
-    print(f"  {param:25s}  n={len(sub):3d}  in-sample R2={r2:.4f}")
+    print(f"  {param:25s}  n={len(sub):4d}  in-sample R2={r2:.4f}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3. Predict city-level vehicle stocks
-#    predicted_per_cap × city_pop = city vehicles
+# 4. Predict city-level vehicle stocks
 # ══════════════════════════════════════════════════════════════════════════════
 print("\nPredicting city-level vehicle stocks ...")
 city_pred_list = []
 
 for param, model in models.items():
-    sub = city_feat[["region", "UID", "pop"] + FEATURES_CITY].copy()
-    per_cap = np.clip(model.predict(sub[FEATURES_CITY].values), 0, None)
+    sub = city_feat[["region", "UID", "pop"] + FEATURES].copy()
+    per_cap = np.clip(model.predict(sub[FEATURES].values), 0, None)
     sub["value"] = per_cap * sub["pop"]
     sub["parameter"] = param
     city_pred_list.append(
@@ -117,7 +152,7 @@ out = (
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 4. Rescale city predictions to match national totals exactly
+# 5. Rescale city predictions to match national totals
 # ══════════════════════════════════════════════════════════════════════════════
 print("\nRescaling city predictions to match national totals ...")
 
@@ -149,14 +184,15 @@ out["value"] = np.where(
 out = out.drop(columns=["nat_total", "city_sum"])
 
 # ── Verify rescaling ──────────────────────────────────────────────────────────
-print("\nNational totals check — predicted vs. actual (2022, BEV):")
+CHECK_YEAR = int(train_full["year"].max())
+print(f"\nNational totals check - predicted vs. actual ({CHECK_YEAR}, BEV):")
 check_pred = (
-    out[(out["year"] == 2022) & (out["parameter"] == "EV stock_BEV")]
+    out[(out["year"] == CHECK_YEAR) & (out["parameter"] == "EV stock_BEV")]
     .groupby("region")["value"].sum().round(0)
 )
 check_actual = (
     train_full[
-        (train_full["year"] == 2022) &
+        (train_full["year"] == CHECK_YEAR) &
         (train_full["parameter_pt"] == "EV stock_BEV")
     ]
     .set_index("region")["value"].round(0)

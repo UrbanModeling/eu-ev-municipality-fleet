@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-NUTS-2 level validation: aggregated model predictions vs. Eurostat total
-car stock (road_eqs_carage), for the 7 countries with > 10 NUTS-2 regions.
+NUTS-2 level validation of the no-nightlight ablation model
+(04_xgb_downscale_nolight.py). Same as validate_nuts2.py otherwise.
 
-Output: output/validation_nuts2/
+Output: output/validation_nuts2_nolight/
 """
 
 import pandas as pd, numpy as np
@@ -14,12 +14,12 @@ warnings.filterwarnings("ignore")
 PROJ = Path(__file__).parent.parent
 DATA = PROJ / "data" / "validation"
 
-VEH_CSV    = PROJ / "output" / "eu14_city_vehicles_xgb_2011_2024.csv"
+VEH_CSV    = PROJ / "output" / "eu14_city_vehicles_xgb_2011_2024_nolight.csv"
 BND_CSV    = PROJ / "data" / "boundary" / "eu14_city.csv"
 LAU_NUTS_CSV = PROJ / "data" / "boundary" / "lau_nuts.csv"
 ESTAT_TSV  = DATA / "eurostat_nuts3_vehicles.tsv"
 LABELS_TSV = DATA / "eurostat_nuts_labels.tsv"
-OUT_DIR    = PROJ / "output" / "validation_nuts2"
+OUT_DIR    = PROJ / "output" / "validation_nuts2_nolight"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 def r2_score(y, yp):

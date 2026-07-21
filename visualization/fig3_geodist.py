@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Figure: Geographic distribution of EV fleet share and EV fleet size (2023)
+Figure: Geographic distribution of EV fleet share and EV fleet size (2024)
 Two-panel choropleth map for Scientific Data manuscript.
 
-Panel A: EV fleet share (%) by municipality, 2023
-Panel B: EV fleet (BEV+PHEV+FCEV) by municipality, 2023
+Panel A: EV fleet share (%) by municipality, 2024
+Panel B: EV fleet (BEV+PHEV+FCEV) by municipality, 2024
 
 Output: output/fig_geodist.png  (300 dpi, ~190mm wide)
 """
@@ -24,7 +24,8 @@ OUT.mkdir(exist_ok=True)
 # ── Load data ──────────────────────────────────────────────────────────────
 print("Loading data...")
 city = pd.read_csv(PROJ / 'output' / 'result_city.csv')
-c23  = city[city['year'] == 2023].copy()
+LAST_YEAR = city['year'].max()
+c23  = city[city['year'] == LAST_YEAR].copy()
 
 gdf = gpd.read_file(str(PROJ / 'data' / 'boundary' / 'eu14_city.gpkg'),
                     columns=['UID', 'geometry'])
@@ -39,8 +40,7 @@ print(f"  Matched: {gdf['ev_share'].notna().sum()} / {len(gdf)}")
 # Project to ETRS89-LAEA Europe (metric, equal-area)
 gdf = gdf.to_crs('EPSG:3035')
 
-# ── Clip to study area extent ──────────────────────────────────────────────
-# Remove overseas territories / outliers for clean map
+# ── Clip to study area extent (remove overseas territories / outliers) ────
 bounds = gdf.total_bounds  # [minx, miny, maxx, maxy]
 # EU continental extent in EPSG:3035 (approx)
 xmin, xmax = 2_500_000, 6_500_000
@@ -97,7 +97,7 @@ cbar_a.ax.tick_params(labelsize=8)
 ax.set_xlim(xmin, xmax)
 ax.set_ylim(ymin, ymax)
 ax.set_axis_off()
-ax.set_title('(a)  EV fleet share, 2023', fontsize=10, pad=6, loc='left')
+ax.set_title(f'(a)  EV fleet share, {LAST_YEAR}', fontsize=10, pad=6, loc='left')
 
 # ── Panel B: EV fleet (log scale) ─────────────────────────────────────────
 ax = axes[1]
@@ -132,12 +132,12 @@ cbar_b.ax.yaxis.set_major_formatter(
 ax.set_xlim(xmin, xmax)
 ax.set_ylim(ymin, ymax)
 ax.set_axis_off()
-ax.set_title('(b)  EV fleet, 2023', fontsize=10, pad=6, loc='left')
+ax.set_title(f'(b)  EV fleet, {LAST_YEAR}', fontsize=10, pad=6, loc='left')
 
 # ── Caption note ───────────────────────────────────────────────────────────
 fig.text(
     0.5, 0.01,
-    'Each polygon represents one GADM level-4 municipality (n = 65,300). '
+    'Each polygon represents one LAU municipality (n = 71,715). '
     'Grey: municipalities with no model coverage. Projection: ETRS89-LAEA (EPSG:3035).',
     ha='center', fontsize=7.5, color='#555555'
 )

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Figure: Temporal trends in EV adoption (2011–2023)
+Figure: Temporal trends in EV adoption (2011–2024)
 Two-panel figure for Scientific Data manuscript — Nature style.
 
-Panel a: BEV fleet by country (stacked area), 2011–2023
-Panel b: EV fleet share by country (line), 2011–2023
+Panel a: BEV fleet by country (stacked area), 2011–2024
+Panel b: EV fleet share by country (line), 2011–2024
 
 Output: output/fig_trends.png  (300 dpi)
 """
@@ -31,16 +31,21 @@ rcParams['ytick.direction']    = 'out'
 rcParams['axes.unicode_minus'] = False
 rcParams['pdf.fonttype']       = 42   # editable text in Illustrator
 
-# ── Load data ──────────────────────────────────────────────────────────────
-nat    = pd.read_csv(PROJ / 'output' / 'result_national.csv')
+# ── Load data (aggregated from city level, no result_national.csv) ────────
+city = pd.read_csv(PROJ / 'output' / 'result_city.csv',
+                    usecols=['country', 'year', 'BEV', 'PHEV', 'FCEV', 'ICEV'])
+nat = city.groupby(['country', 'year'], as_index=False)[['BEV', 'PHEV', 'FCEV', 'ICEV']].sum()
+nat['ev_share'] = (nat['BEV'] + nat['PHEV'] + nat['FCEV']) / \
+                  (nat['BEV'] + nat['PHEV'] + nat['FCEV'] + nat['ICEV']).replace(0, np.nan)
+
 years  = sorted(nat['year'].unique())
+LAST_YEAR = max(years)
 
-# Country order: largest 2023 BEV fleet first
-order_bev = (nat[nat['year'] == 2023]
-             .sort_values('BEV', ascending=False)['region'].tolist())
+# Country order: largest fleet in the final year first
+order_bev = (nat[nat['year'] == LAST_YEAR]
+             .sort_values('BEV', ascending=False)['country'].tolist())
 
-# ── Nature-style colour palette (14 countries) ────────────────────────────
-# Curated qualitative palette inspired by Nature / npg colour schemes
+# ── Colour palette (14 countries, npg-inspired) ───────────────────────────
 PALETTE = {
     'Germany':        '#E64B35',   # red
     'United Kingdom': '#4DBBD5',   # cyan
@@ -59,8 +64,8 @@ PALETTE = {
 }
 
 # ── Panel data ─────────────────────────────────────────────────────────────
-bev_wide   = nat.pivot(index='year', columns='region', values='BEV')[order_bev] / 1e6
-share_wide = nat.pivot(index='year', columns='region', values='ev_share') * 100
+bev_wide   = nat.pivot(index='year', columns='country', values='BEV')[order_bev] / 1e6
+share_wide = nat.pivot(index='year', columns='country', values='ev_share') * 100
 
 # ── Figure layout (Nature double-column ≈ 183 mm wide) ────────────────────
 fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.8), facecolor='white')
@@ -77,7 +82,7 @@ ax.stackplot(years,
              alpha=0.88,
              linewidth=0)
 
-ax.set_xlim(2011, 2023)
+ax.set_xlim(2011, LAST_YEAR)
 ax.set_ylim(0)
 ax.xaxis.set_major_locator(ticker.MultipleLocator(4))
 ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
@@ -99,7 +104,7 @@ ax.legend(handles[::-1], labels_leg[::-1],
 # ── Panel b: EV fleet share (line) ────────────────────────────────────────
 ax = axes[1]
 
-top5 = share_wide.loc[2023].nlargest(5).index.tolist()
+top5 = share_wide.loc[LAST_YEAR].nlargest(5).index.tolist()
 
 # Non-highlighted countries first (background)
 for country in order_bev:
@@ -115,7 +120,7 @@ for country in top5:
             markeredgewidth=0, zorder=3,
             label=country)
 
-ax.set_xlim(2011, 2023)
+ax.set_xlim(2011, LAST_YEAR)
 ax.set_ylim(0)
 ax.xaxis.set_major_locator(ticker.MultipleLocator(4))
 ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
@@ -130,7 +135,7 @@ ax.spines[['top', 'right']].set_visible(False)
 # Direct labels at right margin
 ax_right = ax.get_position().x1
 for country in top5:
-    val = share_wide.loc[2023, country]
+    val = share_wide.loc[LAST_YEAR, country]
     fig.text(ax_right + 0.005, ax.get_position().y0 +
              (val / ax.get_ylim()[1]) * ax.get_position().height,
              country, fontsize=5.8, va='center',
